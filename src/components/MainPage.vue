@@ -1,25 +1,19 @@
 <script setup lang="ts">
-import { MediaPlayer } from 'dashjs';
+import { MediaPlayer, MediaPlayerClass, MediaPlayerSettingClass } from 'dashjs';
 import { Ref, ref, onMounted } from 'vue';
 
 // Parameter refs
 const url: Ref<string> = ref("https://livesim2.dashif.org/livesim2/ato_10/testpic_2s/Manifest.mpd");
-const quality: Ref<number> = ref(0);
-const quality_names: string[] = ["Auto", "240p", "360p", "480p", "720p", "1080p"];
+//const quality: Ref<number> = ref(0);
+//const quality_names: string[] = ["Auto", "240p", "360p", "480p", "720p", "1080p"];
 const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create());
 
 // Video element
 onMounted(() => {
   const settings: MediaPlayerSettingClass = {
     streaming: {
-      lowLatencyEnabled: true,
       delay: {
         liveDelay: 3
-      },
-      liveCatchup: {
-        minDrift: 0.1,
-        playbackRate: 0.5,
-        latencyThreshold: 30
       },
       abr: {
         autoSwitchBitrate: {
@@ -140,6 +134,12 @@ select {
 }
 
 select:hover {
+  background-color: rgba(59, 59, 59, 0.816);
+  color: rgb(255, 255, 255);
+  transition: 0.5s;
+}
+
+select:focus {
   background-color: rgba(59, 59, 59, 0.816);
   color: rgb(255, 255, 255);
   transition: 0.5s;
