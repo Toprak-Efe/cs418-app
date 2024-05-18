@@ -150,7 +150,7 @@ const runReallyFast = () => {
     moving_average.value = (latency_buffer.value.reduce((a, b) => a + parseFloat(b.toString()), 0) / latency_buffer.value.length).toFixed(2).toString()
   }
 }
-setInterval(runReallyFast, 100)
+setInterval(runReallyFast, 500)
 
 const runEverySecond = () => {
   const div_time = document.getElementById('wall_time')
