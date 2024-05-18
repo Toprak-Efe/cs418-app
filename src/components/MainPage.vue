@@ -58,7 +58,7 @@ onMounted(() => {
   player.value.updateSettings(settings);
   const query: Element | null = document.querySelector('#dash');
   if (query) {
-    player.value.initialize(<HTMLMediaElement>query, url.value, true);
+    player.value.initialize(<HTMLMediaElement>query, url.value.toString(), true);
     fetchQualityNames();
   }
   const div_time = document.getElementById('wall_time')
@@ -147,7 +147,7 @@ const runReallyFast = () => {
   } else {
     latency_buffer.value.shift()
     latency_buffer.value.push(qr_delay.value)
-    moving_average.value = (latency_buffer.value.reduce((a, b) => a + parseFloat(b), 0) / latency_buffer.value.length).toFixed(2)
+    moving_average.value = (latency_buffer.value.reduce((a, b) => a + parseFloat(b.toString()), 0) / latency_buffer.value.length).toFixed(2).toString()
   }
 }
 setInterval(runReallyFast, 100)
