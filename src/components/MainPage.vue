@@ -1,28 +1,46 @@
 <script setup lang="ts">
-import { MediaPlayer, MediaPlayerClass, MediaPlayerSettingClass } from 'dashjs';
+import { MediaPlayer, MediaPlayerClass, MediaPlayerSettingClass } from 'dashjs'; //BitrateInfo
 import { Ref, ref, onMounted } from 'vue';
+import moment from 'moment';
+import FFIcon from './FFIcon.vue'
+import RFIcon from './RFIcon.vue'
+import jsQR, { QRCode } from 'jsqr';
 
 // Parameter refs
-const url: Ref<string> = ref("https://livesim2.dashif.org/livesim2/ato_10/testpic_2s/Manifest.mpd");
-//const quality: Ref<number> = ref(0);
-//const quality_names: string[] = ["Auto", "240p", "360p", "480p", "720p", "1080p"];
+const url: Ref<string> = ref("http://127.0.0.1:80/dash/greetings.mpd");
+const quality: Ref<number> = ref(0);
+const quality_names: string[] = ["Auto", "Low", "Medium", "High"];
 const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create());
 
-// Video element
-onMounted(() => {
-  const settings: MediaPlayerSettingClass = {
-    streaming: {
-      delay: {
-        liveDelay: 3
-      },
-      abr: {
-        autoSwitchBitrate: {
-          video: true
-        }
+const live_delay: Ref<number> = ref(0);
+const buffer_len: Ref<number> = ref(0);
+
+// Settings for livestreaming
+const settings: MediaPlayerSettingClass = {
+  streaming: {
+    delay: {
+      liveDelay: 1.5
+    },
+    abr: {
+      autoSwitchBitrate: {
+        video: true,
+        audio: true
+      }
+    },
+    liveCatchup: {
+      maxDrift: 0,
+      playbackRate: {
+        min: 0.5,
+        max: 0.5
       }
     }
   }
+}
+
+// Video element
+onMounted(() => {
   player.value.updateSettings(settings);
+  player.value
   const query: Element | null = document.querySelector('#dash');
   if (query) {
     player.value.initialize(<HTMLMediaElement>query, url.value, true);
@@ -40,6 +58,59 @@ const skip10 = () => {
 const updateURL = () => {
   player.value.attachSource(url.value);
 }
+
+const brChange = () => {
+  return;
+  //const bitrateList: BitrateInfo[] = player.value.getBitrateInfoListFor('video')
+  //if (!settings) {
+  //  return;
+  //}
+  //if (!settings.streaming) {
+  //  return;
+  //}
+  //if (!settings.streaming.abr) {
+  //  return;
+  //}
+  //if (!settings.streaming.abr.autoSwitchBitrate) {
+  //  return;
+  //}
+  //if (bitrateList.length < quality.value || quality.value === 0) {
+  //  settings.streaming.abr.autoSwitchBitrate.video = true
+  //  player.value.updateSettings(settings)
+  //  return
+  //}
+  //settings.streaming.abr.autoSwitchBitrate.video = false
+  //player.value.updateSettings(settings)
+  //player.value.setQualityFor('video', quality.value - 1)
+}
+
+const decodeQR = () => {
+  const query: Element | null = document.querySelector('#dash');
+  if (query) {
+    const canvas: HTMLCanvasElement | null = document.createElement('canvas');
+    if (!canvas) {
+      return;
+    }
+    canvas.width = query.clientWidth;
+    canvas.height = query.clientHeight;
+    const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(<HTMLVideoElement>query, 0, 0, canvas.width, canvas.height);
+      const imageData: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code: QRCode | null = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code) {
+        live_delay.value = moment().unix() - parseInt(code.data)
+      }
+    }
+  }
+}
+setInterval(decodeQR, 200);
+
+const fetchLatency = () => {
+  live_delay.value = player.value.getCurrentLiveLatency()
+  buffer_len.value = player.value.getBufferLength('video')
+}
+setInterval(fetchLatency, 100)
 </script>
 
 <template>
@@ -47,17 +118,14 @@ const updateURL = () => {
     <video id="dash" controls></video>
     <div id="buttons">
       <div id="left">
-        <button class="interactible" @click="trace10"><</button>
-        <button class="interactible" @click="skip10">></button>
-        <select id="quality">
-          <option value="0">Auto</option>
-          <option value="1">240p</option>
-          <option value="2">360p</option>
-          <option value="3">480p</option>
-          <option value="4">720p</option>
-          <option value="5">1080p</option>
+        <button class="interactible" @click="trace10"><RFIcon /></button>
+        <button class="interactible" @click="skip10"><FFIcon /></button>
+        <select id="quality" v-model="quality" v-on:change="brChange">
+          <option v-for="(name, index) in quality_names" :key="index" :value="index">{{ name }}</option>
         </select>
-        <input class="interactible" v-model="url" v-on:change="updateURL" />
+        <input class="interactible" v-model="url" @change="updateURL">
+        <span id="live_delay">{{ live_delay }}s</span>
+        <span id="buffer_len">{{ buffer_len }}s</span>
       </div>
     </div>
   </div>
@@ -80,17 +148,22 @@ const updateURL = () => {
 
 #buttons {
   position: absolute;
-  top: 92%;
+  top: 0%;
   left: 0%;
   padding-left: 0%;
   margin-left: 0%;
   padding-right: 0%;
   margin-right: 0%;
   display: flex;
-  flex-grow: 0.8;
   justify-content: flex-start;
   align-items: center;
   gap: 1em;
+}
+
+#live_delay {
+  padding-right: 0%;
+  margin-right: 0%;
+  font-size: 0.5em;
 }
 
 #left button {
@@ -147,7 +220,7 @@ select:focus {
 
 button {
   height: 2.5vh;
-  width: 5vw;
+  width: 2.5vw;
   border-radius: 0.15em;
   border: 0px solid var(--highlight);
   background-color: rgba(78, 78, 78, 0.219);
@@ -179,5 +252,10 @@ video {
   background-color: black;
   margin-bottom: 0%;
   padding-bottom: 0%;
+}
+
+span {
+  font-size: 0.5em;
+  padding-left: 0.5em;
 }
 </style>

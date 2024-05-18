@@ -2,12 +2,12 @@ services:
   streaming:
     image: nginx-cs418-rtmp:latest
     container_name: docker-streaming
-    network_mode: "host"
-    privileged: true
+    ports:
+      - "1935:1935"
+      - "80:80"
     volumes:
       - ./config/conf.d:/etc/nginx/conf.d:ro
       - ./dist:/usr/share/nginx/html:ro
-      - ./ssl:/etc/nginx/ssl:ro
       - type: bind
         source: ./config/nginx/nginx.conf
         target:  /etc/nginx/nginx.conf
