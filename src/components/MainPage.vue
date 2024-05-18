@@ -7,13 +7,15 @@ import RFIcon from './RFIcon.vue'
 import jsQR, { QRCode } from 'jsqr';
 
 // Parameter refs
-const url: Ref<string> = ref("http://localhost:8000/stream.mpd")
+const url: Ref<String> = ref("http://localhost:8000/stream.mpd")
 const quality: Ref<number> = ref(0)
-const quality_types: Ref<string[]> = ref(['auto', '240p', '360p', '480p', '720p', '1080p'])
+const quality_types: Ref<String[]> = ref(['auto', '240p', '360p', '480p', '720p', '1080p'])
+const latency_buffer: Ref<String[]> = ref([])
+const moving_average: Ref<String> = ref("0")
 const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create())
-const live_delay: Ref<number> = ref(0)
-const buffer_len: Ref<number> = ref(0);
-const qr_delay: Ref<number> = ref(0)
+const live_delay: Ref<String> = ref("0")
+const buffer_len: Ref<String> = ref("0");
+const qr_delay: Ref<String> = ref("0")
 
 // Settings for livestreaming
 const settings: MediaPlayerSettingClass = {
@@ -37,18 +39,6 @@ const settings: MediaPlayerSettingClass = {
     }
   }
 }
-
-// const waitForCondition = (variable: boolean) => {
-//   const waitFor = (result: boolean): Promise<boolean> => {
-//     if (result) {
-//       return Promise.resolve(result);
-//     }
-//     return new Promise((resolve) => setTimeout(resolve, 100))
-//       .then(() => Promise.resolve(variable))
-//       .then((res) => waitFor(res));
-//   };
-//   return waitFor(false);
-// };
 
 const fetchQualityNames = () => {
   quality_types.value.length = 0;
@@ -75,7 +65,6 @@ onMounted(() => {
   if (div_time) {
     div_time.innerHTML = moment().format('HH:mm:ss')
   }
-
 })
 
 const trace10 = () => {
@@ -109,7 +98,30 @@ const bitrateApply = () => {
   player.value.setQualityFor('video', quality.value - 1)
 }
 
-const decodeQR = () => {
+const capture = () => {
+  const query: Element | null = document.querySelector('#dash');
+  if (query) {
+    const canvas: HTMLCanvasElement | null = document.createElement('canvas');
+    if (!canvas) {
+      return;
+    }
+    canvas.width = query.clientWidth;
+    canvas.height = query.clientHeight;
+    const ctx: CanvasRenderingContext2D | null = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(<HTMLVideoElement>query, 0, 0, canvas.width, canvas.height);
+      const a: HTMLAnchorElement | null = document.createElement('a');
+      if (!a) {
+        return;
+      }
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'capture.png';
+      a.click();
+    }
+  }
+}
+
+const runReallyFast = () => {
   const query: Element | null = document.querySelector('#dash');
   if (query) {
     const canvas: HTMLCanvasElement | null = document.createElement('canvas');
@@ -124,28 +136,30 @@ const decodeQR = () => {
       const imageData: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code: QRCode | null = jsQR(imageData.data, imageData.width, imageData.height);
       if (code) {
-        qr_delay.value = (moment().unix()*1000 - parseInt(code.data))/1000.0
+        qr_delay.value = ((moment().unix()*1000 - parseInt(code.data))/1000.0).toFixed(2)
       }
     }
   }
+  buffer_len.value = player.value.getBufferLength('video').toFixed(2)
+  live_delay.value = player.value.getCurrentLiveLatency().toFixed(2)
+  if (latency_buffer.value.length < 10) {
+    latency_buffer.value.push(qr_delay.value)
+  } else {
+    latency_buffer.value.shift()
+    latency_buffer.value.push(qr_delay.value)
+    moving_average.value = (latency_buffer.value.reduce((a, b) => a + parseFloat(b), 0) / latency_buffer.value.length).toFixed(2)
+  }
 }
-setInterval(decodeQR, 200);
+setInterval(runReallyFast, 100)
 
-const fetchLatency = () => {
-  live_delay.value = player.value.getCurrentLiveLatency()
-  buffer_len.value = player.value.getBufferLength('video')
-}
-setInterval(fetchLatency, 50)
-
-const wallTime = () => {
+const runEverySecond = () => {
   const div_time = document.getElementById('wall_time')
   if (div_time) {
     div_time.innerHTML = moment().format('HH:mm:ss')
   }
   fetchQualityNames()
 }
-setInterval(wallTime, 1000)
-
+setInterval(runEverySecond, 1000)
 </script>
 
 <template>
@@ -155,12 +169,14 @@ setInterval(wallTime, 1000)
       <div id="left">
         <button class="interactible" @click="trace10"><RFIcon /></button>
         <button class="interactible" @click="skip10"><FFIcon /></button>
+        <button class="interactible" @click="capture">Capture</button>
         <select id="quality" v-model="quality" v-on:change="bitrateApply">
           <option v-for="(name, index) in quality_types" :key="index" :value="index">{{ name }}</option>
         </select>
         <input class="interactible" v-model="url" @change="updateURL">
         <span id="wall_time"></span>
         <span id="qr_delay">{{ qr_delay }}s</span>
+        <span id="moving_average">{{ moving_average }}s</span>
         <span id="live_delay">{{ live_delay }}s</span>
         <span id="buffer_len">{{ buffer_len }}s</span>
       </div>
@@ -208,6 +224,13 @@ setInterval(wallTime, 1000)
   margin-right: 0%;
   font-size: 0.5em;
   color: red;
+}
+
+#moving_average {
+  padding-right: 0%;
+  margin-right: 0%;
+  font-size: 0.5em;
+  color: rgb(252, 128, 128);
 }
 
 #left button {
