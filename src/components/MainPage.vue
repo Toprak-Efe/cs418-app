@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MediaPlayer, MediaPlayerClass, MediaPlayerSettingClass } from 'dashjs'; //BitrateInfo
+import { MediaPlayer, MediaPlayerClass, MediaPlayerSettingClass, BitrateInfo } from 'dashjs';
 import { Ref, ref, onMounted } from 'vue';
 import moment from 'moment';
 import FFIcon from './FFIcon.vue'
@@ -14,23 +14,32 @@ const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create());
 
 const live_delay: Ref<number> = ref(0);
 const buffer_len: Ref<number> = ref(0);
+const qr_delay: Ref<number> = ref(0);
 
 // Settings for livestreaming
 const settings: MediaPlayerSettingClass = {
   streaming: {
     delay: {
-      liveDelay: 10
+      liveDelay: 2
     },
     abr: {
+      ABRStrategy: 'abrDynamic',
       autoSwitchBitrate: {
         video: true,
         audio: true
-      }
+      },
+      additionalAbrRules: {
+        insufficientBufferRule: true,
+        switchHistoryRule: true,
+        droppedFramesRule: true,
+        abandonRequestsRule: false
+      },
+      fetchThroughputCalculationMode: 'abrFetchThroughputCalculationAAST'
     },
     liveCatchup: {
       maxDrift: 0,
       playbackRate: {
-        min: 0.5,
+        min: -0.5,
         max: 0.5
       }
     }
@@ -60,28 +69,27 @@ const updateURL = () => {
 }
 
 const brChange = () => {
-  return;
-  //const bitrateList: BitrateInfo[] = player.value.getBitrateInfoListFor('video')
-  //if (!settings) {
-  //  return;
-  //}
-  //if (!settings.streaming) {
-  //  return;
-  //}
-  //if (!settings.streaming.abr) {
-  //  return;
-  //}
-  //if (!settings.streaming.abr.autoSwitchBitrate) {
-  //  return;
-  //}
-  //if (bitrateList.length < quality.value || quality.value === 0) {
-  //  settings.streaming.abr.autoSwitchBitrate.video = true
-  //  player.value.updateSettings(settings)
-  //  return
-  //}
-  //settings.streaming.abr.autoSwitchBitrate.video = false
-  //player.value.updateSettings(settings)
-  //player.value.setQualityFor('video', quality.value - 1)
+  const bitrateList: BitrateInfo[] = player.value.getBitrateInfoListFor('video')
+  if (!settings) {
+    return;
+  }
+  if (!settings.streaming) {
+    return;
+  }
+  if (!settings.streaming.abr) {
+    return;
+  }
+  if (!settings.streaming.abr.autoSwitchBitrate) {
+    return;
+  }
+  if (bitrateList.length < quality.value || quality.value === 0) {
+    settings.streaming.abr.autoSwitchBitrate.video = true
+    player.value.updateSettings(settings)
+    return
+  }
+  settings.streaming.abr.autoSwitchBitrate.video = false
+  player.value.updateSettings(settings)
+  player.value.setQualityFor('video', quality.value - 1)
 }
 
 const decodeQR = () => {
@@ -99,7 +107,7 @@ const decodeQR = () => {
       const imageData: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code: QRCode | null = jsQR(imageData.data, imageData.width, imageData.height);
       if (code) {
-        live_delay.value = moment().unix()*1000 - parseInt(code.data)
+        qr_delay.value = moment().unix()*1000 - parseInt(code.data)
       }
     }
   }
@@ -107,7 +115,7 @@ const decodeQR = () => {
 setInterval(decodeQR, 200);
 
 const fetchLatency = () => {
-  //live_delay.value = player.value.getCurrentLiveLatency()
+  live_delay.value = player.value.getCurrentLiveLatency()
   buffer_len.value = player.value.getBufferLength('video')
 }
 setInterval(fetchLatency, 100)
@@ -124,7 +132,8 @@ setInterval(fetchLatency, 100)
           <option v-for="(name, index) in quality_names" :key="index" :value="index">{{ name }}</option>
         </select>
         <input class="interactible" v-model="url" @change="updateURL">
-        <span id="live_delay">{{ live_delay }}ms</span>
+        <span id="qr_delay">{{ qr_delay }}s</span>
+        <span id="live_delay">{{ live_delay }}s</span>
         <span id="buffer_len">{{ buffer_len }}s</span>
       </div>
     </div>
@@ -164,6 +173,13 @@ setInterval(fetchLatency, 100)
   padding-right: 0%;
   margin-right: 0%;
   font-size: 0.5em;
+}
+
+#qr_delay {
+  padding-right: 0%;
+  margin-right: 0%;
+  font-size: 0.5em;
+  color: red;
 }
 
 #left button {
