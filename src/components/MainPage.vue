@@ -7,53 +7,75 @@ import RFIcon from './RFIcon.vue'
 import jsQR, { QRCode } from 'jsqr';
 
 // Parameter refs
-const url: Ref<string> = ref("http://127.0.0.1:80/dash/webcam.mpd");
-const quality: Ref<number> = ref(0);
-const quality_names: string[] = ["Auto", "Low", "Medium", "High"];
-const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create());
-
-const live_delay: Ref<number> = ref(0);
+const url: Ref<string> = ref("http://localhost:8000/stream.mpd")
+const quality: Ref<number> = ref(0)
+const quality_types: Ref<string[]> = ref(['auto', '240p', '360p', '480p', '720p', '1080p'])
+const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create())
+const live_delay: Ref<number> = ref(0)
 const buffer_len: Ref<number> = ref(0);
-const qr_delay: Ref<number> = ref(0);
+const qr_delay: Ref<number> = ref(0)
 
 // Settings for livestreaming
 const settings: MediaPlayerSettingClass = {
   streaming: {
     delay: {
-      liveDelay: 2
+      liveDelay: 0.5
     },
     abr: {
-      ABRStrategy: 'abrDynamic',
-      autoSwitchBitrate: {
-        video: true,
-        audio: true
-      },
       additionalAbrRules: {
         insufficientBufferRule: true,
         switchHistoryRule: true,
         droppedFramesRule: true,
         abandonRequestsRule: false
       },
-      fetchThroughputCalculationMode: 'abrFetchThroughputCalculationAAST'
     },
     liveCatchup: {
-      maxDrift: 0,
       playbackRate: {
         min: -0.5,
         max: 0.5
-      }
+      },
     }
   }
+}
+
+// const waitForCondition = (variable: boolean) => {
+//   const waitFor = (result: boolean): Promise<boolean> => {
+//     if (result) {
+//       return Promise.resolve(result);
+//     }
+//     return new Promise((resolve) => setTimeout(resolve, 100))
+//       .then(() => Promise.resolve(variable))
+//       .then((res) => waitFor(res));
+//   };
+//   return waitFor(false);
+// };
+
+const fetchQualityNames = () => {
+  quality_types.value.length = 0;
+  quality_types.value.push('auto');
+  player.value.getBitrateInfoListFor('video').forEach((bitrate: BitrateInfo) => {
+    quality_types.value.push(String(bitrate.bitrate));
+  });
+}
+
+const updateURL = () => {
+  player.value.attachSource(url.value);
+  fetchQualityNames();
 }
 
 // Video element
 onMounted(() => {
   player.value.updateSettings(settings);
-  player.value
   const query: Element | null = document.querySelector('#dash');
   if (query) {
     player.value.initialize(<HTMLMediaElement>query, url.value, true);
+    fetchQualityNames();
   }
+  const div_time = document.getElementById('wall_time')
+  if (div_time) {
+    div_time.innerHTML = moment().format('HH:mm:ss')
+  }
+
 })
 
 const trace10 = () => {
@@ -64,12 +86,7 @@ const skip10 = () => {
   player.value.seek(player.value.time() + 10);
 }
 
-const updateURL = () => {
-  player.value.attachSource(url.value);
-}
-
-const brChange = () => {
-  const bitrateList: BitrateInfo[] = player.value.getBitrateInfoListFor('video')
+const bitrateApply = () => {
   if (!settings) {
     return;
   }
@@ -82,7 +99,7 @@ const brChange = () => {
   if (!settings.streaming.abr.autoSwitchBitrate) {
     return;
   }
-  if (bitrateList.length < quality.value || quality.value === 0) {
+  if (quality.value === 0) {
     settings.streaming.abr.autoSwitchBitrate.video = true
     player.value.updateSettings(settings)
     return
@@ -118,7 +135,17 @@ const fetchLatency = () => {
   live_delay.value = player.value.getCurrentLiveLatency()
   buffer_len.value = player.value.getBufferLength('video')
 }
-setInterval(fetchLatency, 100)
+setInterval(fetchLatency, 50)
+
+const wallTime = () => {
+  const div_time = document.getElementById('wall_time')
+  if (div_time) {
+    div_time.innerHTML = moment().format('HH:mm:ss')
+  }
+  fetchQualityNames()
+}
+setInterval(wallTime, 1000)
+
 </script>
 
 <template>
@@ -128,10 +155,11 @@ setInterval(fetchLatency, 100)
       <div id="left">
         <button class="interactible" @click="trace10"><RFIcon /></button>
         <button class="interactible" @click="skip10"><FFIcon /></button>
-        <select id="quality" v-model="quality" v-on:change="brChange">
-          <option v-for="(name, index) in quality_names" :key="index" :value="index">{{ name }}</option>
+        <select id="quality" v-model="quality" v-on:change="bitrateApply">
+          <option v-for="(name, index) in quality_types" :key="index" :value="index">{{ name }}</option>
         </select>
         <input class="interactible" v-model="url" @change="updateURL">
+        <span id="wall_time"></span>
         <span id="qr_delay">{{ qr_delay }}s</span>
         <span id="live_delay">{{ live_delay }}s</span>
         <span id="buffer_len">{{ buffer_len }}s</span>
@@ -219,19 +247,6 @@ select {
   border-radius: 0.5em;
   border: 1px solid rgba(134, 134, 134, 0.186);
   color: rgb(166, 166, 166);
-  transition: 0.5s;
-}
-
-select:hover {
-  background-color: rgba(59, 59, 59, 0.816);
-  color: rgb(255, 255, 255);
-  transition: 0.5s;
-}
-
-select:focus {
-  background-color: rgba(59, 59, 59, 0.816);
-  color: rgb(255, 255, 255);
-  transition: 0.5s;
 }
 
 button {
