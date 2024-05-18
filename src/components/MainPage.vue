@@ -7,7 +7,7 @@ import RFIcon from './RFIcon.vue'
 import jsQR, { QRCode } from 'jsqr';
 
 // Parameter refs
-const url: Ref<string> = ref("http://127.0.0.1:80/dash/greetings.mpd");
+const url: Ref<string> = ref("http://127.0.0.1:80/dash/webcam.mpd");
 const quality: Ref<number> = ref(0);
 const quality_names: string[] = ["Auto", "Low", "Medium", "High"];
 const player: Ref<MediaPlayerClass> = ref(MediaPlayer().create());
@@ -19,7 +19,7 @@ const buffer_len: Ref<number> = ref(0);
 const settings: MediaPlayerSettingClass = {
   streaming: {
     delay: {
-      liveDelay: 1.5
+      liveDelay: 10
     },
     abr: {
       autoSwitchBitrate: {
@@ -99,7 +99,7 @@ const decodeQR = () => {
       const imageData: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code: QRCode | null = jsQR(imageData.data, imageData.width, imageData.height);
       if (code) {
-        live_delay.value = moment().unix() - parseInt(code.data)
+        live_delay.value = moment().unix()*1000 - parseInt(code.data)
       }
     }
   }
@@ -107,7 +107,7 @@ const decodeQR = () => {
 setInterval(decodeQR, 200);
 
 const fetchLatency = () => {
-  live_delay.value = player.value.getCurrentLiveLatency()
+  //live_delay.value = player.value.getCurrentLiveLatency()
   buffer_len.value = player.value.getBufferLength('video')
 }
 setInterval(fetchLatency, 100)
@@ -124,7 +124,7 @@ setInterval(fetchLatency, 100)
           <option v-for="(name, index) in quality_names" :key="index" :value="index">{{ name }}</option>
         </select>
         <input class="interactible" v-model="url" @change="updateURL">
-        <span id="live_delay">{{ live_delay }}s</span>
+        <span id="live_delay">{{ live_delay }}ms</span>
         <span id="buffer_len">{{ buffer_len }}s</span>
       </div>
     </div>
