@@ -142,7 +142,7 @@ const runReallyFast = () => {
   }
   buffer_len.value = player.value.getBufferLength('video').toFixed(2)
   live_delay.value = player.value.getCurrentLiveLatency().toFixed(2)
-  if (latency_buffer.value.length < 10) {
+  if (latency_buffer.value.length < 20) {
     latency_buffer.value.push(qr_delay.value)
   } else {
     latency_buffer.value.shift()
