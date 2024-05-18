@@ -124,7 +124,7 @@ const decodeQR = () => {
       const imageData: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code: QRCode | null = jsQR(imageData.data, imageData.width, imageData.height);
       if (code) {
-        qr_delay.value = moment().unix()*1000 - parseInt(code.data)
+        qr_delay.value = (moment().unix()*1000 - parseInt(code.data))/1000.0
       }
     }
   }
