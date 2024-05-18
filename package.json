@@ -11,6 +11,7 @@
   "dependencies": {
     "chart.js": "^4.4.3",
     "dashjs": "^4.0.1",
+    "html2canvas": "^1.4.1",
     "jimp": "^0.22.12",
     "jsqr": "^1.4.0",
     "moment": "^2.30.1",

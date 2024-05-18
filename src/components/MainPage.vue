@@ -21,7 +21,7 @@ const qr_delay: Ref<String> = ref("0")
 const settings: MediaPlayerSettingClass = {
   streaming: {
     delay: {
-      liveDelay: 0.5
+      liveDelay: 1.5
     },
     abr: {
       additionalAbrRules: {
@@ -33,8 +33,8 @@ const settings: MediaPlayerSettingClass = {
     },
     liveCatchup: {
       playbackRate: {
-        min: -0.5,
-        max: 0.5
+        min: -0.2,
+        max: 0.2
       },
     }
   }
@@ -169,7 +169,7 @@ setInterval(runEverySecond, 1000)
       <div id="left">
         <button class="interactible" @click="trace10"><RFIcon /></button>
         <button class="interactible" @click="skip10"><FFIcon /></button>
-        <button class="interactible" @click="capture">Capture</button>
+        <button class="interactible" id="capture" @click="capture">Capture</button>
         <select id="quality" v-model="quality" v-on:change="bitrateApply">
           <option v-for="(name, index) in quality_types" :key="index" :value="index">{{ name }}</option>
         </select>
@@ -231,6 +231,10 @@ setInterval(runEverySecond, 1000)
   margin-right: 0%;
   font-size: 0.5em;
   color: rgb(252, 128, 128);
+}
+
+#capture {
+
 }
 
 #left button {
@@ -296,6 +300,10 @@ interactible {
   margin: 0.5em 0em;
   font-size: 1em;
   cursor: pointer;
+}
+
+#capture {
+  width: 6em;
 }
 
 video {
