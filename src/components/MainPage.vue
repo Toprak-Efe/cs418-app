@@ -21,22 +21,24 @@ const qr_delay: Ref<String> = ref("0")
 const settings: MediaPlayerSettingClass = {
   streaming: {
     delay: {
-      liveDelay: 1.5
+      liveDelay: 1.0
     },
-    abr: {
-      additionalAbrRules: {
-        insufficientBufferRule: true,
-        switchHistoryRule: true,
-        droppedFramesRule: true,
-        abandonRequestsRule: false
-      },
+    buffer: {
+      stallThreshold: 0.05
     },
     liveCatchup: {
+      mode: 'liveCatchupModeLoLP',
+      playbackBufferMin: 0.5,
       playbackRate: {
-        min: -0.2,
-        max: 0.2
+        min: -0.3,
+        max: 0.3
       },
-    }
+    },
+    abr: {
+      useDefaultABRRules: true,
+      ABRStrategy: 'abrLoLP',
+      fetchThroughputCalculationMode: 'abrFetchThroughputCalculationMoofParsing',
+    },
   }
 }
 
