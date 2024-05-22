@@ -7,7 +7,7 @@ import RFIcon from './RFIcon.vue'
 import jsQR, { QRCode } from 'jsqr';
 
 // Parameter refs
-const url: Ref<String> = ref("http://localhost:8000/stream.mpd")
+const url: Ref<String> = ref("https://stream.xreos.co/stream.mpd")
 const quality: Ref<number> = ref(0)
 const quality_types: Ref<String[]> = ref(['auto', '240p', '360p', '480p', '720p', '1080p'])
 const latency_buffer: Ref<String[]> = ref([])
